@@ -32,14 +32,19 @@ class GameApp:
     running = True
     paused = False
 
-    key_codes = []
-    up_pressed = False
-    down_pressed = False
+    key_codes = [
+        [81],
+        [68],
+        [83],
+        [32],
+        [13],
+        [27]
+    ]
     left_pressed = False
     right_pressed = False
+    down_pressed = False
     jump_pressed = False
     jump_prev_pressed = False
-    esc_pressed = False
     
     def __init__(self, name = "Game"):
         self.window = Tk()
@@ -51,6 +56,7 @@ class GameApp:
         
         self.window.bind("<ButtonPress-1>", self.mouse1_pressed)
         self.window.bind("<ButtonRelease-1>", self.mouse1_released)
+        self.window.bind("<Key>", self.key_pressed)
         for i in range(len(self.terrain)):
             self.layout.create_line(0,i*self.TILESIZE,len(self.terrain[0])*self.TILESIZE,i*self.TILESIZE)
         for i in range(len(self.terrain[0])):
@@ -59,12 +65,10 @@ class GameApp:
         
     def mainloop(self):
         prev_time = time()
-        update_time = 0.0
         while self.running:
             delta = time() - prev_time
-            update_time += delta
             prev_time = time()
-            if delta > 0.0 and not self.paused:
+            if not self.paused:
                 for obj in self.objects:
                     try:
                         obj._update(delta*self.time_scale)
@@ -79,19 +83,36 @@ class GameApp:
         for obj in self.objects:
             del obj
         self.window.destroy
+    
+    def create_player(self):
+        if self.player_object is None:
+            self.player_object = Player(80,80)
+            self.objects.append(self.player_object)
 
     def mouse1_pressed(self, evt):
-        self.player_object = Player(evt.x,evt.y)
-        self.objects.append(self.player_object)
         print("clicked at ", evt.x, evt.y)
-    
     def mouse1_released(self, evt):
         pass
+
+    def key_pressed(self, evt):
+        if evt.keycode in self.key_codes[0]:
+            self.left_pressed = True
+        if evt.keycode in self.key_codes[1]:
+            self.right_pressed = True
+        if evt.keycode in self.key_codes[2]:
+            self.down_pressed = True
+        if evt.keycode in self.key_codes[3]:
+            self.jump_pressed = True
+            self.jump_prev_pressed = True
+        if evt.keycode in self.key_codes[4]:
+            self.create_player()
+        if evt.keycode in self.key_codes[5]:
+            self.running = False
 
 class Player:
     GRAVITY = 1.0              # px/s/s
     MAX_SPEED = 2.0          # px/s
-    MAX_FALL_SPEED = -2.0      # px/s
+    MAX_FALL_SPEED = 2.0      # px/s
     ACCEL = 1.0               # px/s/s
     DECCEL = 1.0              # px/s/s
     MAX_AIR_TIME = 0.7          # s
@@ -118,8 +139,8 @@ class Player:
         self.tile_img = Game.layout.create_oval(0,0,0,0, fill="green")
 
     def _update(self, delta):
-        if self.vel[1] > self.MAX_FALL_SPEED:
-            self.vel[1] -= self.GRAVITY * delta
+        if self.vel[1] < self.MAX_FALL_SPEED:
+            self.vel[1] += (self.GRAVITY * delta)
         
         self.vel = self.move_and_slide(self.vel)
         self.update_pos()
@@ -135,7 +156,7 @@ class Player:
                 vel[0] = 0.0
         if (self.pos[1]+vel[1])//Game.TILESIZE <= self.tile[1]:
             if self.get_tilemap_collision("y",-1, Game.terrain):
-                self.pos[1] = self.tile[1]*Game.TILESIZE + 
+                self.pos[1] = self.tile[1]*Game.TILESIZE
                 vel[1] = 0.0
         if (self.pos[1]+self.hitbox[1]+vel[1])//Game.TILESIZE >= self.tile[0]:
             if self.get_tilemap_collision("y",1, Game.terrain):
