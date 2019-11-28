@@ -119,11 +119,11 @@ class GameApp:
             self.jump_pressed = False
 
 class Player:
-    GRAVITY = 150.0              # px/s/s
-    MAX_SPEED = 2000.0          # px/s
-    MAX_FALL_SPEED = 900.0      # px/s
-    ACCEL = 100.0               # px/s/s
-    DECCEL = 500.0              # px/s/s
+    GRAVITY = 1.0              # px/s/s
+    MAX_SPEED = 12.0          # px/s
+    MAX_FALL_SPEED = 9.0      # px/s
+    ACCEL = 1.0               # px/s/s
+    DECCEL = 5.0              # px/s/s
     MAX_AIR_TIME = 0.7          # s
     
     pos = [0,0]
@@ -149,24 +149,27 @@ class Player:
 
     def _update(self, delta):
         if self.vel[1] < self.MAX_FALL_SPEED:
-            self.vel[1] += self.GRAVITY
-        
+            self.vel[1] += self.GRAVITY * delta
+
         if Game.left_pressed and self.vel[0] > -self.MAX_SPEED:
-            self.vel[0] -= self.ACCEL
+            self.vel[0] -= self.ACCEL * delta
         if Game.right_pressed and self.vel[0] < self.MAX_SPEED:
-            self.vel[0] += self.ACCEL
+            self.vel[0] += self.ACCEL * delta
         if not (Game.right_pressed or Game.left_pressed):
             if self.vel[0] > 0.0:
-                self.vel[0] -= self.DECCEL
+                self.vel[0] -= self.DECCEL * delta
             elif self.vel[0] < 0.0:
-                self.vel[0] += self.DECCEL
+                self.vel[0] += self.DECCEL * delta
+            else:
+                self.vel[0] = 0.0
 
-        self.vel = self.move_and_slide(self.vel, delta)
-        self.update_pos()
+        move_vel = self.move_and_slide(self.vel, delta)
+        self.update_pos(move_vel)
 
-    def move_and_slide(self, vel, delta):
-        vel[0] *= delta
-        vel[1] *= delta
+    def move_and_slide(self, velocity, delta):
+        vel = [0,0]
+        vel[0] = velocity[0]
+        vel[1] = velocity[1]
         if (self.pos[0]+vel[0])//Game.TILESIZE <= self.tile[0]:
             if self.get_tilemap_collision("x",-1, Game.terrain):
                 self.pos[0] = self.tile[0]*Game.TILESIZE
@@ -183,11 +186,11 @@ class Player:
             if self.get_tilemap_collision("y",1, Game.terrain):
                 self.pos[1] = self.tile[1]*Game.TILESIZE
                 vel[1] = 0.0
+        self.pos[0] += vel[0]
+        self.pos[1] += vel[1]
         return vel
     
-    def update_pos(self):
-        self.pos[0] += self.vel[0]
-        self.pos[1] += self.vel[1]
+    def update_pos(self, vel):
         self.tile[0] = (self.pos[0]+self.hitbox[0]/2)//Game.TILESIZE
         self.tile[1] = (self.pos[1]+self.hitbox[1]/2)//Game.TILESIZE
         Game.layout.coords(self.sprite, self.pos[0], self.pos[1], self.pos[0]+self.hitbox[0], self.pos[1]+self.hitbox[1])
@@ -198,9 +201,9 @@ class Player:
         col = False
         try:
             if axis == "x":
-                col = (tilemap[int((self.pos[0]+self.hitbox[0]/2)//Game.TILESIZE + dir)][int(self.pos[1]//Game.TILESIZE)] > 0) or (tilemap[int((self.pos[0]+self.hitbox[0]/2)//Game.TILESIZE + dir)][int((self.pos[1]+self.hitbox[1])//Game.TILESIZE)] > 0)
+                col = (tilemap[int((self.pos[0]+self.hitbox[0]/2)//Game.TILESIZE)][int(self.pos[1]//Game.TILESIZE + dir)] > 0) or (tilemap[int((self.pos[0]+self.hitbox[0]/2)//Game.TILESIZE)][int((self.pos[1]+self.hitbox[1])//Game.TILESIZE + dir)] > 0)
             elif axis == "y":
-                col = (tilemap[int(self.pos[0]//Game.TILESIZE)][int((self.pos[1]+self.hitbox[1]/2)//Game.TILESIZE + dir)] > 0) or (tilemap[int((self.pos[0]+self.hitbox[0])//Game.TILESIZE)][int((self.pos[1]+self.hitbox[1]/2)//Game.TILESIZE + dir)] > 0)
+                col = (tilemap[int(self.pos[0]//Game.TILESIZE + dir)][int((self.pos[1]+self.hitbox[1]/2)//Game.TILESIZE)] > 0) or (tilemap[int((self.pos[0]+self.hitbox[0])//Game.TILESIZE + dir)][int((self.pos[1]+self.hitbox[1]/2)//Game.TILESIZE)] > 0)
         except:
             self.exists = False
         return col
